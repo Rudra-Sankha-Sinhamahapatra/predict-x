@@ -104,3 +104,39 @@ export const signin = async (req: Request, res: Response): Promise<void> => {
         });
     }
 };
+
+export const getMe = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const userId = req.userId;
+
+        if (!userId) {
+            res.status(401).json({
+                message: "User not authenticated"
+            });
+            return;
+        }
+
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId)
+        });
+
+        if (!user) {
+            res.status(404).json({
+                message: "User not found"
+            });
+            return;
+        }
+
+        const { password, ...userWithoutPassword } = user;
+
+        res.status(200).json({
+            message: "User retrieved successfully",
+            user: userWithoutPassword
+        });
+    } catch (error: any) {
+        console.error("Error: ", error.message);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+};

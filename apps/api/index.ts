@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from 'cookie-parser';
 import { config } from "./config";
 import userRouter from "./routes/user"
+import biddingRouter from "./routes/biddings"
 
 const app = express();
 app.use(cookieParser());
@@ -27,6 +28,7 @@ app.get("/", (req: Request, res: Response) => {
   });
 
   app.use("/api/v1/user",userRouter);
+  app.use("/api/v1/biddings",biddingRouter);
   
 
 const startServer = async () => {
