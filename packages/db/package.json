@@ -3,6 +3,12 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "push": "drizzle-kit push",
+    "studio": "drizzle-kit studio"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
