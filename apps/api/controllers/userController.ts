@@ -1,0 +1,106 @@
+import type { Response, Request } from "express";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import { db, users } from "@repo/db";
+import { SignupSchema, SigninSchema } from "@repo/backend-common"
+import { eq } from "drizzle-orm";
+import { config } from "../config";
+
+export const signup = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const zodResult = SignupSchema.safeParse(req.body);
+        if (!zodResult.success) {
+            res.status(400).json({
+                message: "Wrong inputs, validation failed",
+                errors: zodResult.error
+            });
+            return;
+        }
+
+        const newUser = zodResult.data;
+
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, newUser.email)
+        });
+
+        if (existingUser) {
+            res.status(409).json({
+                message: "User already exists"
+            });
+            return;
+        }
+
+        const hashedPassword = await bcrypt.hash(newUser.password, 10);
+
+
+        const result = await db.insert(users).values({
+            email: newUser.email,
+            password: hashedPassword,
+            name: newUser.name
+        }).returning();
+
+        const user = result[0];
+
+        const token = jwt.sign({ id: user?.id }, config.server.jwt);
+
+        res.status(200).json({
+            message: "User Signed Up Successfully",
+            token,
+            user
+        });
+    } catch (error: any) {
+        console.error("Error: ", error.message);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+};
+
+export const signin = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const result = SigninSchema.safeParse(req.body);
+        if (!result.success) {
+            res.status(400).json({
+                message: "Wrong inputs, validation failed",
+                errors: result.error
+            });
+            return;
+        }
+
+        const { email, password } = result.data;
+
+        const existingUser = await db.query.users.findFirst({
+            where: eq(users.email, email)
+        });
+
+        if (!existingUser) {
+            res.status(404).json({
+                message: "User doesn't exist"
+            });
+            return;
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, existingUser.password);
+
+        if (!isPasswordValid) {
+            res.status(400).json({
+                message: "Invalid password"
+            });
+            return;
+        }
+
+        const token = jwt.sign({ id: existingUser.id }, config.server.jwt);
+
+        res.status(200).json({
+            message: "User Signed In Successfully",
+            token,
+            userId: existingUser.id,
+            user: existingUser
+        });
+    } catch (error: any) {
+        console.error("Error: ", error.message);
+        res.status(500).json({
+            message: "Internal server error"
+        });
+    }
+};
