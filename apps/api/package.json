@@ -8,6 +8,7 @@
     "start": "bun run index.ts"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.7",
     "@types/bun": "latest",
     "@types/cookie-parser": "^1.4.9",
     "@types/cors": "^2.8.19",
@@ -22,6 +23,7 @@
   },
   "dependencies": {
     "@types/jsonwebtoken": "^9.0.10",
+    "amqplib": "^0.10.8",
     "bcryptjs": "^3.0.2",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
