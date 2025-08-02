@@ -1,0 +1,19 @@
+{
+  "name": "engine",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.2",
+    "@repo/db": "workspace:*",
+    "@repo/backend-common": "workspace:*"
+  },
+  "dependencies": {
+    "@types/amqplib": "^0.10.7",
+    "amqplib": "^0.10.8",
+    "drizzle-orm": "^0.44.4"
+  }
+}

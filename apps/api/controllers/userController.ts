@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { db, users } from "@repo/db";
 import { SignupSchema, SigninSchema } from "@repo/backend-common"
 import { eq } from "drizzle-orm";
-import { config } from "../config";
+import { config } from "@repo/backend-common";
 
 export const signup = async (req: Request, res: Response): Promise<void> => {
     try {

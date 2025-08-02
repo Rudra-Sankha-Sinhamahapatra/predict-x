@@ -1,5 +1,5 @@
 import aqmp from "amqplib"
-import { config } from "../config";
+import { config } from "@repo/backend-common";
 import type { Vote } from "@repo/backend-common"
 
 const QUEUE_NAME = config.server.queue.names.vote;

@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import cookieParser from 'cookie-parser';
-import { config } from "./config";
+import { config } from "@repo/backend-common";
 import userRouter from "./routes/user"
 import biddingRouter from "./routes/biddings"
 
