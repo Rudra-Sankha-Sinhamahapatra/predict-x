@@ -27,13 +27,13 @@ export const betting_board = pgTable("betting_board",{
 export const options = pgTable("options", {
     id: uuid("id").primaryKey().defaultRandom(),
     text: text("text").notNull(),
-    bettingId: uuid("betting_id").notNull().references(() => betting_board.id ),
+    bettingId: uuid("betting_id").notNull().references(() => betting_board.id, { onDelete: "cascade" } ),
     payout: real("payout")
 });
 
 export const votes = pgTable("votes", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull().references(() => users.id),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     optionId: uuid("option_id").notNull().references(() => options.id),
     amount: integer("amount").notNull(),
     createdAt: timestamp("created_at").defaultNow()
@@ -41,14 +41,14 @@ export const votes = pgTable("votes", {
 
 export const wallet = pgTable("wallet", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId:  uuid("user_id").notNull().references(() => users.id),
+    userId:  uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     token: real("token").default(30),
     createdAt: timestamp("created_at").defaultNow()
 })
 
 export const transactions = pgTable("transactions", {
     id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").notNull().references(() => users.id),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     type: transactionTypeEnum("type").notNull(), 
     amount: real("amount").notNull(),
     relatedVoteId: uuid("vote_id").references(() => votes.id),
