@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { config } from "@repo/backend-common";
 import userRouter from "./routes/user"
 import biddingRouter from "./routes/biddings"
+import voteRouter from "./routes/votes"
 
 const app = express();
 app.use(cookieParser());
@@ -29,6 +30,7 @@ app.get("/", (req: Request, res: Response) => {
 
   app.use("/api/v1/user",userRouter);
   app.use("/api/v1/biddings",biddingRouter);
+  app.use("/api/v1/votes",voteRouter);
   
 
 const startServer = async () => {

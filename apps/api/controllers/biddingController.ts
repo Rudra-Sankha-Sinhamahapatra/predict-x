@@ -48,7 +48,7 @@ export const getBiddingById = async(req:Request,res:Response) : Promise<void> =>
         }
 
         res.status(200).json({
-            msg:"Bidding received successfully",
+            message:"Bidding received successfully",
             bidding: getBidding[0]
         })
     } catch (error) {
@@ -94,7 +94,8 @@ export const getBiddingResults = async (req: Request, res: Response): Promise<vo
 
         if (currentBidding.status !== "RESOLVED") {
             res.status(400).json({
-                message: "Bidding is not yet resolved"
+                message: "Bidding is not yet resolved",
+                status: currentBidding.status
             });
             return;
         }
@@ -152,9 +153,10 @@ export const getBiddingResults = async (req: Request, res: Response): Promise<vo
                 category: currentBidding.category,
                 createdBy: currentBidding.createdBy,
                 createdAt: currentBidding.createdAt,
-                resolvedAt: currentBidding.resolvedAt
+                resolvedAt: currentBidding.resolvedAt,
+                status: currentBidding.status
             },
-            results
+            results,
         });
 
     } catch (error) {

@@ -1,7 +1,7 @@
 import type { Response, Request } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { db, users } from "@repo/db";
+import { db, users, wallet } from "@repo/db";
 import { SignupSchema, SigninSchema } from "@repo/backend-common"
 import { eq } from "drizzle-orm";
 import { config } from "@repo/backend-common";
@@ -40,6 +40,17 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
         }).returning();
 
         const user = result[0];
+
+        if(!user) {
+          res.status(404).json({
+            message: "User not found",
+          })
+          return;
+        }
+
+        await db.insert(wallet).values({
+          userId: user.id,
+        });
 
         const token = jwt.sign({ id: user?.id }, config.server.jwt);
 
