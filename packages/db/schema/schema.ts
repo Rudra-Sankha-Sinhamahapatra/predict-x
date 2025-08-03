@@ -1,4 +1,5 @@
 import { pgTable, text,uuid, timestamp, pgEnum, real,integer } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 
 export const bettingStatusEnum = pgEnum("topic_status", ["OPEN","CLOSED","RESOLVED"]);
 export const categoryEnum = pgEnum("category",["SPORTS","POLITICS","TECH","MOVIES","SOCIALMEDIA","OTHER"]);
@@ -55,3 +56,50 @@ export const transactions = pgTable("transactions", {
     createdAt: timestamp("created_at").defaultNow()
   });
   
+
+export const usersRelations = relations(users, ({ one, many }) => ({
+  votes: many(votes),
+  wallet: one(wallet),
+  transactions: many(transactions)
+}));
+
+export const bettingBoardRelations = relations(betting_board, ({ one, many }) => ({
+  options: many(options),
+}));
+
+export const optionsRelations = relations(options, ({ one, many }) => ({
+  betting_board: one(betting_board, {
+    fields: [options.bettingId],
+    references: [betting_board.id]
+  }),
+  votes: many(votes)
+}));
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  user: one(users, {
+    fields: [votes.userId],
+    references: [users.id]
+  }),
+  option: one(options, {
+    fields: [votes.optionId],
+    references: [options.id]
+  })
+}));
+
+export const walletRelations = relations(wallet, ({ one }) => ({
+  user: one(users, {
+    fields: [wallet.userId],
+    references: [users.id]
+  })
+}));
+
+export const transactionsRelations = relations(transactions, ({ one }) => ({
+  user: one(users, {
+    fields: [transactions.userId],
+    references: [users.id]
+  }),
+  vote: one(votes, {
+    fields: [transactions.relatedVoteId],
+    references: [votes.id]
+  })
+}));
