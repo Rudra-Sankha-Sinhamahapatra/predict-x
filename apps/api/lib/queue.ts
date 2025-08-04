@@ -3,14 +3,105 @@ import { config } from "@repo/backend-common";
 import type { Vote } from "@repo/backend-common"
 
 const QUEUE_NAME = config.server.queue.names.vote;
+const QUEUE_URL = config.server.queue.url;
 
-export async function publishVoteEvent(data:Vote) {
-  const connection = await aqmp.connect(config.server.queue.url);
-  const channel = await connection.createChannel();
+let connection: any = null;
+let channel: any = null;
 
-  await channel.assertQueue(QUEUE_NAME);
-  channel.sendToQueue(QUEUE_NAME,Buffer.from(JSON.stringify(data)));
+export async function connectToRabbitMQ() {
+   try {
+    if(connection && channel) {
+      console.log("Connection & channel already established");
+      return true;
+    }
 
-  await channel.close();
-  await connection.close();
+    connection = await aqmp.connect(QUEUE_URL);
+
+    connection.error('error', (err:any) => {
+      console.error('🔴 RabbitMQ Connection Error:', err);
+      channel = null;
+    });
+
+    connection.on('close', () => {
+      console.log('🔴 RabbitMQ Connection Closed');
+      channel = null;
+  });
+
+  channel = await connection.createChannel();
+
+  channel.on('error', (err: any) => {
+    console.error('🔴 RabbitMQ Channel Error:', err);
+  });
+
+  channel.on('close', () => {
+    console.log('🔴 RabbitMQ Channel Closed');
+  });
+
+  await channel.assertQueue(QUEUE_NAME, {
+    durable: true,
+  });
+
+  console.log("Channel Created");
+  console.log("Queue Connection Established");
+  return true;
+   } catch (error) {
+    console.error("Failed to initialize RabbitMQ connection ", error);
+    await closeQueue();
+    throw error;
+   }
+}
+
+export const closeQueue = async () => {
+  try {
+      if(channel && !channel.close) {
+        console.log("Closing channel");
+        await channel.close();
+        console.log("Channel closed");
+      }
+      if(connection && !connection.close) {
+        console.log("Closing connection");
+        await connection.close();
+        console.log("Connection closed");
+      }
+  } catch (error) {
+    console.log("Error closing queue: ",error)
+  } finally {
+      channel = null;
+      connection = null;
+  }
+}
+
+export async function publishVoteEvent(voteData:Vote) {
+  try {
+    if(!channel) {
+      await connectToRabbitMQ();
+    }
+    if(!channel) throw new Error("Channel not found");
+
+    const messageWithTimeStamp = {
+      ...voteData,
+      timestamp: Date.now(),
+    };
+
+    const success = await channel.sendToQueue(
+      QUEUE_NAME,
+      Buffer.from(JSON.stringify(messageWithTimeStamp)),
+      {
+        persistant: true,
+        contentType: 'application/json',
+        expiration: '86400000', // 24 hrs
+        timestamp: Date.now(),
+        messageId: `vote-${Date.now()}`
+      }
+    );
+
+    if(success) {
+      console.log("Vote published to queue:", voteData);
+  } 
+
+  return success;
+  } catch (error) {
+    console.error("Error publishing vote to queue: ", error);
+    throw error;
+  }
 }

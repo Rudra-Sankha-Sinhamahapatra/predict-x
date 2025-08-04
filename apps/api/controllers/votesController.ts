@@ -1,6 +1,7 @@
 import { db, options, transactions, votes, wallet } from "@repo/db";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
+import { publishVoteEvent } from "../lib/queue";
 
 export const userVote = async(req:Request,res:Response): Promise<void> => {
     try {
@@ -100,6 +101,17 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
             return newVote[0];
 
         });
+
+        try {
+            await publishVoteEvent({
+                userId,
+                topicId: option.betting_board.id,
+                optionId,
+                amount
+            });
+        } catch (queueError) {
+            console.error("Failed to publish to queue:", queueError);
+        }
 
         res.status(200).json({
             message: "Vote placed successfully",
