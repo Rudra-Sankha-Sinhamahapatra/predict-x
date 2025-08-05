@@ -1,12 +1,12 @@
 import aqmp from "amqplib"
 import { config } from "@repo/backend-common";
-import type { Vote } from "@repo/backend-common"
+import type { AmqpChannel, AmqpConnection, Vote } from "@repo/backend-common"
 
 const QUEUE_NAME = config.server.queue.names.vote;
 const QUEUE_URL = config.server.queue.url;
 
-let connection: any = null;
-let channel: any = null;
+let connection: AmqpConnection | null = null;
+let channel: AmqpChannel | null = null;
 
 export async function connectToRabbitMQ() {
    try {
@@ -17,7 +17,7 @@ export async function connectToRabbitMQ() {
 
     connection = await aqmp.connect(QUEUE_URL);
 
-    connection.error('error', (err:any) => {
+    connection.on('error', (err:any) => {
       console.error('RabbitMQ Connection Error:', err);
       channel = null;
     });
@@ -87,7 +87,7 @@ export async function publishVoteEvent(voteData:Vote) {
       QUEUE_NAME,
       Buffer.from(JSON.stringify(messageWithTimeStamp)),
       {
-        persistant: true,
+        persistent : true,
         contentType: 'application/json',
         expiration: '86400000', // 24 hrs
         timestamp: Date.now(),

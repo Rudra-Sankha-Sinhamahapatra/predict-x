@@ -68,10 +68,12 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
         }
 
         const result = await db.transaction(async (tx) => {
+            const currentPayoutRate = option.payout || 1.0;
             const newVote = await tx.insert(votes).values({
                 userId,
                 optionId,
-                amount
+                amount,
+                expctedReturn: currentPayoutRate
             }).returning();
 
             if(!userWallet?.token) {
