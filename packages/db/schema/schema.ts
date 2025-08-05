@@ -37,6 +37,7 @@ export const votes = pgTable("votes", {
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     optionId: uuid("option_id").notNull().references(() => options.id),
     amount: integer("amount").notNull(),
+    expctedReturn: real("expcted_return").notNull(),
     createdAt: timestamp("created_at").defaultNow()
 })
 

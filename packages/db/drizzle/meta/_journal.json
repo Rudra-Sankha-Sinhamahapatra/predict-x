@@ -15,6 +15,20 @@
       "when": 1754220230222,
       "tag": "0001_curvy_proudstar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1754396132536,
+      "tag": "0002_marvelous_the_watchers",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1754396762848,
+      "tag": "0003_powerful_big_bertha",
+      "breakpoints": true
     }
   ]
 }

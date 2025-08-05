@@ -1,0 +1,1 @@
+ALTER TABLE "votes" ALTER COLUMN "amount" SET DATA TYPE real;
