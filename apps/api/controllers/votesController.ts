@@ -2,6 +2,8 @@ import { db, options, transactions, votes, wallet } from "@repo/db";
 import { and, eq } from "drizzle-orm";
 import type { Request, Response } from "express";
 import { publishVoteEvent } from "../lib/queue";
+import type { CalculatedOdds } from "@repo/backend-common";
+import redisSubscriber from "../redis";
 
 export const userVote = async(req:Request,res:Response): Promise<void> => {
     try {
@@ -67,8 +69,58 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
             return;
         }
 
+        const currentPayoutRate = option.payout || 1.0;
+
+        try {
+            await publishVoteEvent({
+                userId,
+                topicId: option.betting_board.id,
+                optionId,
+                amount
+            });
+        } catch (queueError) {
+            console.error("Failed to publish to queue:", queueError);
+            res.status(500).json({
+                message: "Failed to process vote"
+            });
+            return;
+        }
+
+        const redisChannel = `odds:${option.betting_board.id}`;
+
+        const oddsUpdatePromise = new Promise<CalculatedOdds>((resolve,reject) => {
+            const timeout = setTimeout(() => {
+               reject(new Error("Odds calculation timeout"));
+            },10000); // 10 seconds
+
+            const messageHandler = async (message: string) => {
+                try {
+                    clearTimeout(timeout);
+                    const calculatedOdds: CalculatedOdds = JSON.parse(message);
+                    console.log('Received updated odds:', calculatedOdds);
+
+                    for (const optionData of calculatedOdds.options) {
+                        await db.update(options)
+                        .set({ payout: optionData.currentPayout })
+                        .where(eq(options.id, optionData.optionId));
+                    }
+
+                    console.log("Updated payout rates in database");
+
+                    await redisSubscriber.unsubscribe(redisChannel,messageHandler);
+                    resolve(calculatedOdds);
+                } catch (error) {
+                    clearTimeout(timeout);
+                    reject(error);
+                }
+            };
+            redisSubscriber.subscribe(redisChannel,messageHandler);
+        });
+
+        await oddsUpdatePromise;
+
+
         const result = await db.transaction(async (tx) => {
-            const currentPayoutRate = option.payout || 1.0;
             const newVote = await tx.insert(votes).values({
                 userId,
                 optionId,
@@ -80,7 +132,7 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
                 res.status(400).json({
                     message: "Insufficient tokens"
                 });
-                return; 
+                return null; 
             }
 
             await tx.update(wallet)
@@ -90,7 +142,7 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
                 res.status(400).json({
                     message: "no vote found"
                 });
-                return; 
+                return null; 
             }
 
             await tx.insert(transactions).values({
@@ -104,20 +156,12 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
 
         });
 
-        try {
-            await publishVoteEvent({
-                userId,
-                topicId: option.betting_board.id,
-                optionId,
-                amount
-            });
-        } catch (queueError) {
-            console.error("Failed to publish to queue:", queueError);
-        }
 
         res.status(200).json({
             message: "Vote placed successfully",
-            vote: result
+            vote: result,
+            originalPayoutRate: currentPayoutRate,
+            note: "Odds have been updated for future votes"
         });
 
     } catch (error) {
