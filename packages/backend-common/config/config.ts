@@ -11,7 +11,10 @@ export const config = {
       names:{
         vote: 'vote_events'
       }
-    }
+    },
+    redis: {
+      url: process.env.REDIS_URL || "redis://localhost:6379",
+    },
   },
   frontend:{
     url: process.env.FRONTEND_URL || 'http://localhost:3000'
