@@ -2,6 +2,7 @@ import amqp from "amqplib"
 import { config, type CalculatedOdds, type Vote } from "@repo/backend-common";
 import { db, options, votes } from "@repo/db";
 import { eq, inArray } from "drizzle-orm";
+import { redisPublisher } from "./redis";
 
 const QUEUE_NAME = config.server.queue.names.vote;
 const RABBITMQ_URL = config.server.queue.url;
@@ -65,9 +66,12 @@ async function processVote(vote: Vote) {
       
       const newOdds = await calculateOdds(vote);
       
-      // Later: Push to Redis/PubSub for API to consume
+      // Push to Redis/PubSub for API to consume
+      const redisChannel = `odds:${vote.topicId}`;
+      await redisPublisher.publish(redisChannel,JSON.stringify(newOdds));
+
       console.log('Calculated new odds:', newOdds);
-  
+      console.log(`Published new odds to Redis channel ${redisChannel}`);
     } catch (error) {
       console.error('Error processing vote:', error);
     }
