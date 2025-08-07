@@ -15,6 +15,9 @@ export const config = {
     redis: {
       url: process.env.REDIS_URL || "redis://localhost:6379",
     },
+    ws: {
+      url: process.env.WS_PORT || 8080
+    }
   },
   frontend:{
     url: process.env.FRONTEND_URL || 'http://localhost:3000'
