@@ -70,8 +70,12 @@ async function processVote(vote: Vote) {
       const redisChannel = `odds:${vote.topicId}`;
       await redisPublisher.publish(redisChannel,JSON.stringify(newOdds));
 
+      const redisOddsKey = `latest_odds:${vote.topicId}`;
+      await redisPublisher.set(redisOddsKey, JSON.stringify(newOdds));
+
       console.log('Calculated new odds:', newOdds);
       console.log(`Published new odds to Redis channel ${redisChannel}`);
+      console.log(`Stored latest odds in Redis key ${redisOddsKey}`);
     } catch (error) {
       console.error('Error processing vote:', error);
     }
