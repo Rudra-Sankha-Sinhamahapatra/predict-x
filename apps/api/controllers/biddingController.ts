@@ -1,6 +1,7 @@
-import { db,betting_board, options, votes, users } from "@repo/db";
+import { db, betting_board, options, votes, users } from "@repo/db";
 import { eq } from "drizzle-orm";
 import type { Request, Response } from "express";
+import redisClient from "../redisClient";
 
 export const getAllBiddings = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -33,28 +34,60 @@ export const getBiddingById = async(req:Request,res:Response) : Promise<void> =>
             return;
           }
 
-          
-        const getBidding = await db
-        .select()
-        .from(betting_board)
-        .where(eq(betting_board.id,id))
-        .limit(1);
+          const redisOddsKey = `latest_odds:${id}`;
+          const latestOddsString = await redisClient.get(redisOddsKey);
 
-        if(!getBidding || getBidding.length === 0) {
-            res.status(404).json({
-                message: "Bidding not found"
-              });
-              return;
+          if(latestOddsString) {
+            const getBidding = await db.query.betting_board.findFirst({
+                where: eq(betting_board.id, id),
+            });
+
+            if(!getBidding) {
+                res.status(404).json({
+                    message: "Bidding not found"
+                  });
+                  return;
+            }
+            res.status(200).json({
+                message: "Bidding received successfully",
+                bidding: getBidding,
+                latestOdds: JSON.parse(latestOddsString)
+            });
+            return;
+          }
+     
+          const getBidding = await db.query.betting_board.findFirst({
+            where: eq(betting_board.id, id),
+            with: { options: true }
+        });
+
+        if (!getBidding) {
+            res.status(404).json({ message: "Bidding not found" });
+            return;
         }
+
+        const initialOdds = {
+            topicId: id,
+            options: getBidding.options.map(opt => ({
+                optionId: opt.id,
+                amount: 0,
+                currentPayout: opt.payout || 1.5,
+            })),
+            timestamp: new Date(),
+        };
+
+        await redisClient.set(redisOddsKey, JSON.stringify(initialOdds));
 
         res.status(200).json({
             message:"Bidding received successfully",
-            bidding: getBidding[0]
+            bidding: getBidding,
+            latestOdds: initialOdds,
         })
     } catch (error) {
         res.status(500).json({
             message: "Internal server error"
           });
+          return;
     }
 }
 
