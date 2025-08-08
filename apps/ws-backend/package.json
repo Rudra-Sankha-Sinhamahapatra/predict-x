@@ -3,7 +3,7 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "dev":"bun run index.ts"
+    "dev": "bun run index.ts"
   },
   "private": true,
   "devDependencies": {
@@ -13,9 +13,11 @@
   },
   "peerDependencies": {
     "typescript": "^5.9.2",
-    "@repo/backend-common": "workspace:*"
+    "@repo/backend-common": "workspace:*",
+    "@repo/db": "workspace:*"
   },
   "dependencies": {
+    "drizzle-orm": "^0.44.4",
     "ioredis": "^5.7.0",
     "ws": "^8.18.3"
   }
