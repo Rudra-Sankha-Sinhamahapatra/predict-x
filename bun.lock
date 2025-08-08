@@ -99,6 +99,7 @@
     "apps/ws-backend": {
       "name": "ws-backend",
       "dependencies": {
+        "drizzle-orm": "^0.44.4",
         "ioredis": "^5.7.0",
         "ws": "^8.18.3",
       },
@@ -109,6 +110,7 @@
       },
       "peerDependencies": {
         "@repo/backend-common": "workspace:*",
+        "@repo/db": "workspace:*",
         "typescript": "^5.9.2",
       },
     },
