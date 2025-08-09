@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@repo/db";
-import { betting_board, options, votes } from "@repo/db";
+import { betting_board, options, votes, wallet, transactions } from "@repo/db";
 import { eq, and } from "drizzle-orm";
 import type { InferSelectModel } from "drizzle-orm";
 
@@ -123,6 +123,8 @@ export async function PATCH(
           { status: 400 }
         );
       }
+      
+      await distributeWinnings(winningOptionId);
     }
 
     const [updatedTopic] = await db
@@ -141,5 +143,53 @@ export async function PATCH(
       { error: "Failed to update topic" },
       { status: 500 }
     );
+  }
+}
+
+async function distributeWinnings(winningOptionId: string) {
+  try {
+    const winningVotes = await db
+      .select()
+      .from(votes)
+      .where(eq(votes.optionId, winningOptionId));
+
+    console.log(`Distributing winnings for ${winningVotes.length} winning votes`);
+
+    for (const vote of winningVotes) {
+      const winAmount = vote.amount * vote.expctedReturn;
+      
+      const [userWallet] = await db
+        .select()
+        .from(wallet)
+        .where(eq(wallet.userId, vote.userId));
+
+      if (userWallet) {
+        await db
+          .update(wallet)
+          .set({
+            token: (userWallet.token || 0) + winAmount
+          })
+          .where(eq(wallet.userId, vote.userId));
+      } else {
+        await db.insert(wallet).values({
+          userId: vote.userId,
+          token: winAmount
+        });
+      }
+
+      await db.insert(transactions).values({
+        userId: vote.userId,
+        type: "WIN",
+        amount: winAmount,
+        relatedVoteId: vote.id
+      });
+
+      console.log(`Distributed ${winAmount} tokens to user ${vote.userId} for vote ${vote.id} (${vote.amount} * ${vote.expctedReturn} = ${winAmount})`);
+    }
+
+    console.log("Winnings distribution completed successfully");
+  } catch (error) {
+    console.error("Error distributing winnings:", error);
+    throw error;
   }
 }
