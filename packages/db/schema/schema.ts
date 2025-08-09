@@ -53,7 +53,7 @@ export const transactions = pgTable("transactions", {
     userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     type: transactionTypeEnum("type").notNull(), 
     amount: real("amount").notNull(),
-    relatedVoteId: uuid("vote_id").references(() => votes.id),
+    relatedVoteId: uuid("vote_id").references(() => votes.id, { onDelete: "cascade"}),
     createdAt: timestamp("created_at").defaultNow()
   });
   

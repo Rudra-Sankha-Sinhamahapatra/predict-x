@@ -29,6 +29,13 @@
       "when": 1754396762848,
       "tag": "0003_powerful_big_bertha",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754738724277,
+      "tag": "0004_faithful_whiplash",
+      "breakpoints": true
     }
   ]
 }
