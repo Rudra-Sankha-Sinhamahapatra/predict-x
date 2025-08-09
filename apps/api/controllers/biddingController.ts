@@ -5,10 +5,12 @@ import redisClient from "../redisClient";
 
 export const getAllBiddings = async (req: Request, res: Response): Promise<void> => {
   try {
-    const allBiddings = await db
-    .select()
-    .from(betting_board)
-    .where(eq(betting_board.status,"OPEN"));
+    const allBiddings = await db.query.betting_board.findMany({
+      where: eq(betting_board.status, "OPEN"),
+      with: {
+        options: true,
+      },
+    });
 
     res.status(200).json({
         message:"fetched all active biddings",
@@ -40,6 +42,7 @@ export const getBiddingById = async(req:Request,res:Response) : Promise<void> =>
           if(latestOddsString) {
             const getBidding = await db.query.betting_board.findFirst({
                 where: eq(betting_board.id, id),
+                with: { options: true }
             });
 
             if(!getBidding) {
@@ -71,6 +74,7 @@ export const getBiddingById = async(req:Request,res:Response) : Promise<void> =>
             options: getBidding.options.map(opt => ({
                 optionId: opt.id,
                 amount: 0,
+                text: opt.text, 
                 currentPayout: opt.payout || 1.5,
             })),
             timestamp: new Date(),
