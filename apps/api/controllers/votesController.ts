@@ -71,6 +71,46 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
 
         const currentPayoutRate = option.payout || 1.0;
 
+        const result = await db.transaction(async (tx) => {
+            const newVote = await tx.insert(votes).values({
+                userId,
+                optionId,
+                amount,
+                expctedReturn: currentPayoutRate
+            }).returning();
+
+            if(!userWallet?.token) {
+                res.status(400).json({
+                    message: "Insufficient tokens"
+                });
+                return null; 
+            }
+
+            await tx.update(wallet)
+            .set({ token: userWallet.token - amount })
+            .where(eq(wallet.userId, userId));
+
+            if(!newVote[0]) {
+                res.status(400).json({
+                    message: "no vote found"
+                });
+                return null; 
+            }
+
+            await tx.insert(transactions).values({
+                userId,
+                type: "VOTE",
+                amount: -amount,
+                relatedVoteId: newVote[0].id
+            });
+
+            return newVote[0];
+        });
+
+        if (!result) {
+            return; 
+        }
+
         try {
             await publishVoteEvent({
                 userId,
@@ -80,8 +120,11 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
             });
         } catch (queueError) {
             console.error("Failed to publish to queue:", queueError);
-            res.status(500).json({
-                message: "Failed to process vote"
+            res.status(200).json({
+                message: "Vote placed successfully (odds update pending)",
+                vote: result,
+                originalPayoutRate: currentPayoutRate,
+                note: "Vote saved but odds calculation failed"
             });
             return;
         }
@@ -91,7 +134,7 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
         const oddsUpdatePromise = new Promise<CalculatedOdds>((resolve,reject) => {
             const timeout = setTimeout(() => {
                reject(new Error("Odds calculation timeout"));
-            },10000); // 10 seconds
+            },10000);
 
             const messageHandler = async (message: string) => {
                 try {
@@ -117,44 +160,19 @@ export const userVote = async(req:Request,res:Response): Promise<void> => {
             redisSubscriber.subscribe(redisChannel,messageHandler);
         });
 
-        await oddsUpdatePromise;
+        try {
+            await oddsUpdatePromise;
+        } catch (oddsError) {
+            console.error("Odds update failed:", oddsError);
 
-
-        const result = await db.transaction(async (tx) => {
-            const newVote = await tx.insert(votes).values({
-                userId,
-                optionId,
-                amount,
-                expctedReturn: currentPayoutRate
-            }).returning();
-
-            if(!userWallet?.token) {
-                res.status(400).json({
-                    message: "Insufficient tokens"
-                });
-                return null; 
-            }
-
-            await tx.update(wallet)
-            .set({ token: userWallet.token - amount })
-
-            if(!newVote[0]) {
-                res.status(400).json({
-                    message: "no vote found"
-                });
-                return null; 
-            }
-
-            await tx.insert(transactions).values({
-                userId,
-                type: "VOTE",
-                amount: -amount,
-                relatedVoteId: newVote[0].id
+            res.status(200).json({
+                message: "Vote placed successfully (odds update timeout)",
+                vote: result,
+                originalPayoutRate: currentPayoutRate,
+                note: "Vote saved but odds update timed out"
             });
-
-            return newVote[0];
-
-        });
+            return;
+        }
 
 
         res.status(200).json({
