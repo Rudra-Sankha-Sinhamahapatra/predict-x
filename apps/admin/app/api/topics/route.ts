@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@repo/db";
-import { betting_board, options } from "@repo/db";
+import { betting_board, options, votes } from "@repo/db";
 import { desc, eq } from "drizzle-orm";
 
 export async function GET() {
@@ -17,9 +17,27 @@ export async function GET() {
           .from(options)
           .where(eq(options.bettingId, topic.id));
 
+        const optionsWithVotes = await Promise.all(
+          topicOptions.map(async (opt) => {
+            const optionVotes = await db
+              .select()
+              .from(votes)
+              .where(eq(votes.optionId, opt.id));
+
+            return {
+              ...opt,
+              voteCount: optionVotes.length,
+              currentPayout: opt.payout || 1.5,
+            };
+          })
+        );
+
+        const totalVotes = optionsWithVotes.reduce((sum, opt) => sum + opt.voteCount, 0);
+
         return {
           ...topic,
-          options: topicOptions,
+          options: optionsWithVotes,
+          totalVotes,
         };
       })
     );
