@@ -1,7 +1,7 @@
 import type { Response, Request } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { db, users, wallet } from "@repo/db";
+import { db, users, wallet, votes } from "@repo/db";
 import { SignupSchema, SigninSchema } from "@repo/backend-common"
 import { eq } from "drizzle-orm";
 import { config } from "@repo/backend-common";
@@ -138,11 +138,62 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
+        const userWallet = await db.query.wallet.findFirst({
+            where: eq(wallet.userId, userId)
+        });
+
+        const userVotes = await db.query.votes.findMany({
+            where: eq(votes.userId, userId),
+            with: {
+                option: {
+                    with: {
+                        betting_board: true
+                    }
+                }
+            }
+        });
+
+        const uniqueMarkets = new Set(userVotes.map(vote => vote.option.betting_board.id));
+        const totalBets = uniqueMarkets.size;
+        const totalInvested = userVotes.reduce((sum, vote) => sum + vote.amount, 0);
+        
+        const activeMarkets = new Set(
+            userVotes
+                .filter(vote => vote.option.betting_board.status === "OPEN")
+                .map(vote => vote.option.betting_board.id)
+        );
+        const activeBets = activeMarkets.size;
+
+        const resolvedMarkets = new Set(
+            userVotes
+                .filter(vote => vote.option.betting_board.status === "RESOLVED")
+                .map(vote => vote.option.betting_board.id)
+        );
+        const wonBets = resolvedMarkets.size;  
+
+        let accountLevel = "Beginner";
+        if (totalBets >= 100) accountLevel = "Expert";
+        else if (totalBets >= 50) accountLevel = "Advanced";
+        else if (totalBets >= 20) accountLevel = "Intermediate";
+
         const { password, ...userWithoutPassword } = user;
 
         res.status(200).json({
             message: "User retrieved successfully",
-            user: userWithoutPassword
+            user: {
+                ...userWithoutPassword,
+                wallet: {
+                    balance: userWallet?.token || 30
+                },
+                stats: {
+                    totalBets,
+                    totalInvested,
+                    activeBets,
+                    wonBets,
+                    accountLevel,
+                    winRate: totalBets > 0 ? ((wonBets / totalBets) * 100).toFixed(1) : "0.0"
+                }
+            }
         });
     } catch (error: any) {
         console.error("Error: ", error.message);
