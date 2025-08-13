@@ -14,7 +14,6 @@ PredictX is a real-time prediction market platform using AMM (Automated Market M
 4. **Engine Worker** → Consumes vote events and recalculates odds using AMM formula
 5. **Redis Pub/Sub** → Engine publishes updated odds; WebSocket server subscribes and broadcasts to clients
 6. **Real-time Updates** → Clients receive instant odds updates via WebSocket connections
-7. **Data Archiver** → Stores historical data and manages data retention
 
 This event-driven architecture ensures real-time odds updates while maintaining data consistency and system reliability.
 
