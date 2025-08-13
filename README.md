@@ -6,6 +6,11 @@ A real-time prediction market platform built with AMM-style pool mechanics for o
 
 PredictX is a real-time prediction market platform using AMM (Automated Market Maker) pool-style mechanics for opinion trading.
 
+## Demo Video
+
+https://github.com/user-attachments/assets/0d36288d-2fb4-499a-916a-bb5ef0d573ec
+
+
 ### How it works:
 
 1. **Client Interaction** → Users interact with the web app to place votes/bets on prediction topics
